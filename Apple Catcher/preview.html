@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Apple Math Catcher</title>
+
+<style>
+    *{
+        margin:0;
+        padding:0;
+        box-sizing:border-box;
+        font-family:Arial, sans-serif;
+    }
+
+    body{
+        background: linear-gradient(to bottom, #87CEEB, #dff6ff);
+        overflow:hidden;
+    }
+
+    #gameContainer{
+        width:100vw;
+        height:100vh;
+        position:relative;
+    }
+
+    canvas{
+        background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 70%, #7ec850 70%, #4caf50 100%);
+        display:block;
+    }
+
+    #ui{
+        position:absolute;
+        top:10px;
+        left:10px;
+        color:white;
+        text-shadow:2px 2px 4px black;
+        z-index:10;
+        font-size:20px;
+    }
+    
+    #instructions{
+        text-align:center;
+    
+    }
+
+    #question{
+        position:absolute;
+        top:40px;
+        left:50%;
+        transform:translateX(-50%);
+
+        font-size:48px;
+        font-weight:bold;
+
+        color:yellow;
+
+        text-shadow:
+        3px 3px 6px black,
+        0 0 10px black;
+
+        z-index:15;
+
+        text-align:center;
+}
+
+    #leaderboard{
+        position:absolute;
+        right:10px;
+        top:10px;
+        background:rgba(0,0,0,0.7);
+        color:white;
+        padding:15px;
+        border-radius:10px;
+        width:220px;
+        z-index:10;
+    }
+
+    #leaderboard h2{
+        margin-bottom:10px;
+        text-align:center;
+    }
+
+    #leaderboard ol{
+        padding-left:20px;
+    }
+
+    #startScreen, #gameOverScreen{
+        position:absolute;
+        inset:0;
+        background:rgba(0,0,0,0.8);
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        flex-direction:column;
+        color:white;
+        z-index:20;
+    }
+
+    input{
+        padding:10px;
+        font-size:18px;
+        margin:10px;
+        border:none;
+        border-radius:5px;
+        width:250px;
+    }
+
+    button{
+        padding:12px 20px;
+        font-size:18px;
+        border:none;
+        border-radius:8px;
+        background:#ff9800;
+        color:white;
+        cursor:pointer;
+        transition:0.2s;
+    }
+
+    button:hover{
+        background:#fb8c00;
+        transform:scale(1.05);
+    }
+
+    .controls{
+        margin-top:15px;
+        font-size:18px;
+    }
+</style>
+</head>
+
+<body>
+
+<div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="question">Collect 5 apples!</div>
+
+    <div id="ui">
+        <div id="playerName">Player:</div>
+        <div id="round">Easy - Level 1</div>
+        <div id="lives">Lives: ❤️❤️❤️</div>
+    </div>
+
+    <div id="startScreen">
+        <h1 style="margin-bottom:20px;">🍎 Apple Math Catcher 🍎</h1>
+
+        <input type="text" id="nameInput" placeholder="Enter your name"/>
+
+        <button onclick="startGame()">Start Game</button>
+        <br />
+    <div class = "instructions">
+            Instructions:
+            </div>
+        
+        <div class="controls">
+            Move with ⬅️ ➡️ Arrow Keys
+        </div>
+    <img    
+    src="images/instructions.png"
+    style="
+        width:400px;
+        margin:20px;
+        border-radius:10px;
+    "
+/>
+    <div>
+        <div>You will lose if all lives are lost</div>
+        <div>Good Luck!</div>
+    </div>
+        
+        
+    </div>
+
+    <div id="gameOverScreen" style="display:none;">
+        <h1 id="finalMessage"></h1>
+        <h2 id="finalroundsCompleted"></h2>
+        <button onclick="restartGame()">Play Again</button>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const basketImg = new Image();
+basketImg.src = "images/basket.png";
+
+const appleImg = new Image();
+appleImg.src = "images/apple.png";
+
+const bgImg = new Image();
+bgImg.src = "images/background.png";
+
+const catchSound = new Audio("audio/catch.mp3");
+const wrongSound = new Audio("audio/wrong.mp3");
+const missSound = new Audio("audio/miss.mp3");
+const winSound = new Audio("audio/win.mp3");
+const gameOverSound = new Audio("audio/gameover.mp3");
+
+const bgMusic = new Audio("audio/background.mp3");
+bgMusic.loop = true;
+bgMusic.volume = 0.4;
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let player;
+let apples = [];
+let keys = {};
+let lives = 3;
+let setCounter = "Easy";
+let currentLevel = 1;
+let currentSet = 1;
+const levelsPerSet = 10;
+const maxSets = 3;
+let appleSpeed = 2;
+let gameRunning = false;
+let playerName = "";
+let correctAnswer = 0;
+let num1 = 0;
+let num2 = 0;
+
+
+function resizeCanvas(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resizeCanvas);
+
+class Basket{
+    constructor(){
+        this.width = 120;
+        this.height = 30;
+        this.x = canvas.width / 2 - this.width/2;
+        this.y = canvas.height - 70;
+        this.speed = 10;
+    }
+
+    draw(){
+        ctx.drawImage(
+    basketImg,
+    this.x,
+    this.y,
+    this.width,
+    this.height
+);
+    }
+
+    move(){
+        if(keys["ArrowLeft"]){
+            this.x -= this.speed;
+        }
+
+        if(keys["ArrowRight"]){
+            this.x += this.speed;
+        }
+
+        if(this.x < 0) this.x = 0;
+        if(this.x + this.width > canvas.width){
+            this.x = canvas.width - this.width;
+        }
+    }
+}
+
+
+
+class Apple{
+    constructor(number, isCorrect){
+        this.radius = 25;
+        this.x = Math.random() * (canvas.width - 60) + 30;
+        this.y = -50;
+        this.speed = appleSpeed;
+
+        this.number = number;
+        this.isCorrect = isCorrect;
+    }
+
+    draw(){
+        ctx.drawImage(
+    appleImg,
+    this.x - this.radius,
+    this.y - this.radius,
+    this.radius * 2,
+    this.radius * 2
+);
+
+        // number text
+        ctx.fillStyle = "white";
+        ctx.font = "20px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(this.number, this.x, this.y + 7);
+    }
+
+    update(){
+        this.y += this.speed;
+    }
+}
+
+function updateDifficulty(){
+
+    if(currentSet === 1){
+        appleSpeed = 2;
+        setCounter = "Easy";
+    }
+    else if(currentSet === 2){
+        appleSpeed = 3;
+        setCounter = "Medium";
+    }
+    else if(currentSet === 3){
+        appleSpeed = 4;
+        setCounter = "Hard";
+    }
+}
+
+function generateQuestion(){
+
+    apples = [];
+
+    if(currentSet === 1){
+    num1 = Math.floor(Math.random() * 10) + 1;
+    num2 = Math.floor(Math.random() * 10) + 1;
+}
+else if(currentSet === 2){
+    num1 = Math.floor(Math.random() * 10) + 1;
+    num2 = Math.floor(Math.random() * 10) + 1;
+}
+else{
+    num1 = Math.floor(Math.random() * 10) + 1;
+    num2 = Math.floor(Math.random() * 10) + 1;
+}
+
+    correctAnswer = num1 + num2;
+
+    document.getElementById("question").innerText =
+        `${num1} + ${num2} = ?`;
+
+    generateAnswerApples();
+}
+
+function generateAnswerApples(){
+
+    const answers = [correctAnswer];
+
+    // generate wrong answers
+    while(answers.length < 4){
+
+        let wrong =
+            correctAnswer + Math.floor(Math.random() * 11) - 5;
+
+        if(
+            wrong !== correctAnswer &&
+            wrong > 0 &&
+            !answers.includes(wrong)
+        ){
+            answers.push(wrong);
+        }
+    }
+
+    // shuffle answers
+    answers.sort(() => Math.random() - 0.5);
+
+    // create apples
+    for(let i = 0; i < answers.length; i++){
+
+        const isCorrect = answers[i] === correctAnswer;
+
+        let apple = new Apple(answers[i], isCorrect);
+
+        // spread apples across screen
+        apple.x = (canvas.width / 5) * (i + 1);
+
+        apples.push(apple);
+    }
+}
+
+function updateLivesUI(){
+
+    let hearts = "";
+
+    for(let i = 0; i < lives; i++){
+        hearts += "❤️";
+    }
+
+    document.getElementById("lives").innerText =
+        `Lives: ${hearts}`;
+}
+
+function update(){
+
+    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+
+    player.move();
+    player.draw();
+
+    let answerChosen = false;
+    let correct = false;
+    let missed = false;
+
+    for(let i = apples.length - 1; i >= 0; i--){
+
+        apples[i].update();
+        apples[i].draw();
+
+        // PLAYER CAUGHT APPLE
+        if(
+            apples[i].y + apples[i].radius > player.y &&
+            apples[i].x > player.x &&
+            apples[i].x < player.x + player.width
+        ){
+
+            answerChosen = true;
+            correct = apples[i].isCorrect;
+
+            apples = [];
+
+            break;
+        }
+
+        // PLAYER MISSED APPLES
+        if(apples[i].y > canvas.height + 50){
+
+            apples = [];
+
+            missed = true;
+
+            break;
+        }
+    }
+
+    // WRONG ANSWER
+    if(answerChosen && !correct){
+
+    wrongSound.currentTime = 0;
+    wrongSound.play();
+
+    lives--;
+
+    updateLivesUI();
+
+    if(lives <= 0){
+
+        endGame();
+
+        return;
+    }
+
+    generateQuestion();
+}
+
+    // CORRECT ANSWER
+    if(answerChosen && correct){
+    
+        catchSound.currentTime = 0;
+        catchSound.play();
+        
+        currentLevel++;
+        
+
+if(currentLevel > levelsPerSet){
+
+    currentSet++;
+    currentLevel = 1;
+    lives++;
+
+    if(lives > 5){
+        lives = 5;
+    }
+
+    updateLivesUI();
+
+    updateDifficulty();
+
+    if(currentSet > maxSets){
+        winGame();
+        return;
+    }
+}
+
+        // increase difficulty slowly
+
+        generateQuestion();
+
+        updateUI();
+    }
+
+    // MISSED APPLES
+    if(missed){
+
+    missSound.currentTime = 0;
+    missSound.play();
+
+    lives--;
+
+    updateLivesUI();
+
+    if(lives <= 0){
+
+        endGame();
+
+        return;
+    }
+
+    generateQuestion();
+}
+
+    if(gameRunning){
+        requestAnimationFrame(update);
+    }
+}
+
+function updateUI(){
+
+    document.getElementById("round").innerText =
+    `${setCounter} - Level ${currentLevel}`;
+}
+
+function startGame(){
+    const input = document.getElementById("nameInput");
+
+    if(input.value.trim() === ""){
+        alert("Please enter your name!");
+        return;
+    }
+    
+
+    playerName = input.value.trim();
+
+    document.getElementById("playerName").innerText =
+        `Player: ${playerName}`;
+
+    document.getElementById("startScreen").style.display = "none";
+
+    player = new Basket();
+    
+
+    roundsCompleted = 0;
+    currentRound = 1;
+    appleSpeed = 2;
+    apples = [];
+    
+    lives = 3;
+    
+    updateLivesUI();
+
+    generateQuestion();
+    updateUI();
+
+    gameRunning = true;
+    
+    bgMusic.currentTime = 0;
+    bgMusic.play();
+    
+    update();
+}
+
+function winGame(){
+
+    gameRunning = false;
+    
+    bgMusic.pause();
+    
+    winSound.play();
+
+    document.getElementById("finalMessage").innerText =
+        `🏆 Congratulations ${playerName}!`;
+
+    document.getElementById("finalroundsCompleted").innerText =
+        `You completed all 3 sets!`;
+
+    document.getElementById("gameOverScreen").style.display = "flex";
+}
+
+function endGame(){
+    gameRunning = false;
+    
+    bgMusic.pause();
+    
+    gameOverSound.play();
+
+    document.getElementById("finalMessage").innerText =
+        `🎉 Game Over, ${playerName}!`;
+
+    document.getElementById("finalroundsCompleted").innerText =
+        `Rounds Survived: ${roundsCompleted}`;
+
+    document.getElementById("gameOverScreen").style.display = "flex";
+}
+
+function restartGame(){
+    document.getElementById("gameOverScreen").style.display = "none";
+    document.getElementById("startScreen").style.display = "flex";
+}
+
+
+window.addEventListener("keydown", e=>{
+    keys[e.key] = true;
+});
+
+window.addEventListener("keyup", e=>{
+    keys[e.key] = false;
+});
+</script>
+
+</body>
+</html>
