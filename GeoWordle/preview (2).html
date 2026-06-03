@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GeoWordle Quest</title>
+
+<style>
+    *{
+        box-sizing:border-box;
+        margin:0;
+        padding:0;
+        font-family:Arial, Helvetica, sans-serif;
+    }
+
+    body{
+        background:linear-gradient(135deg,#0f172a,#1e3a8a,#0f766e);
+        min-height:100vh;
+        color:white;
+        overflow-x:hidden;
+    }
+
+    .background-glow{
+        position:fixed;
+        width:500px;
+        height:500px;
+        border-radius:50%;
+        background:rgba(255,255,255,0.08);
+        filter:blur(100px);
+        top:-100px;
+        left:-100px;
+        z-index:0;
+    }
+
+    .background-glow2{
+        position:fixed;
+        width:400px;
+        height:400px;
+        border-radius:50%;
+        background:rgba(0,255,200,0.12);
+        filter:blur(100px);
+        bottom:-100px;
+        right:-100px;
+        z-index:0;
+    }
+
+    .container{
+        position:relative;
+        z-index:2;
+        max-width:900px;
+        margin:auto;
+        padding:20px;
+        text-align:center;
+    }
+
+    h1{
+        font-size:3rem;
+        margin-bottom:10px;
+        text-shadow:0 0 15px rgba(255,255,255,0.3);
+    }
+
+    .subtitle{
+        margin-bottom:20px;
+        color:#dbeafe;
+    }
+
+    .game-panel{
+        background:rgba(255,255,255,0.08);
+        border:1px solid rgba(255,255,255,0.15);
+        border-radius:20px;
+        padding:20px;
+        backdrop-filter:blur(10px);
+        box-shadow:0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .round-info{
+        display:flex;
+        justify-content:space-between;
+        margin-bottom:15px;
+        font-size:1.1rem;
+        flex-wrap:wrap;
+        gap:10px;
+    }
+
+    .image-container{
+        width:100%;
+        height:400px;
+        overflow:hidden;
+        border-radius:20px;
+        margin-bottom:20px;
+        border:3px solid rgba(255,255,255,0.2);
+        position:relative;
+    }
+
+    .image-container img{
+        width:100%;
+        height:100%;
+        object-fit:cover;
+    }
+
+    .question{
+        font-size:1.4rem;
+        margin-bottom:20px;
+    }
+
+    .guess-box{
+        display:flex;
+        justify-content:center;
+        gap:10px;
+        margin-bottom:20px;
+        flex-wrap:wrap;
+    }
+
+    input{
+        padding:14px;
+        width:260px;
+        border:none;
+        border-radius:12px;
+        font-size:1rem;
+        outline:none;
+    }
+
+    button{
+        padding:14px 22px;
+        border:none;
+        border-radius:12px;
+        background:#22c55e;
+        color:white;
+        font-weight:bold;
+        cursor:pointer;
+        transition:0.2s;
+        font-size:1rem;
+    }
+
+    button:hover{
+        transform:scale(1.05);
+        background:#16a34a;
+    }
+
+    .guesses{
+        display:grid;
+        grid-template-columns:repeat(6,1fr);
+        gap:10px;
+        margin-top:20px;
+    }
+
+    .guess{
+        padding:15px 5px;
+        border-radius:12px;
+        background:rgba(255,255,255,0.08);
+        border:1px solid rgba(255,255,255,0.1);
+        min-height:60px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-weight:bold;
+    }
+
+    .correct{
+        background:#16a34a;
+    }
+
+    .close{
+        background:#ca8a04;
+    }
+
+    .wrong{
+        background:#991b1b;
+    }
+    
+    .menu-screen{
+        position:fixed;
+        inset:0;
+        background:rgba(5,10,25,0.95);
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        z-index:100;
+        padding:20px;
+    }
+
+    .menu-card{
+        width:100%;
+        max-width:500px;
+        background:rgba(255,255,255,0.08);
+        border:1px solid rgba(255,255,255,0.15);
+        border-radius:25px;
+        padding:40px;
+        text-align:center;
+        backdrop-filter:blur(10px);
+    }
+
+    .menu-text{
+        margin:20px 0;
+        color:#dbeafe;
+        line-height:1.6;
+    }
+
+    .instructions{
+        text-align:left;
+        margin:20px 0;
+    }
+
+    .instructions ul{
+        margin-top:10px;
+        padding-left:20px;
+        line-height:1.8;
+    }
+
+    #playerName{
+        width:100%;
+        margin-top:20px;
+    }
+
+    .message{
+        margin-top:20px;
+        font-size:1.2rem;
+        min-height:30px;
+    }
+
+    .scoreboard{
+        margin-top:20px;
+        display:flex;
+        justify-content:center;
+        gap:20px;
+        flex-wrap:wrap;
+    }
+
+    .score-card{
+        background:rgba(255,255,255,0.1);
+        padding:15px 20px;
+        border-radius:15px;
+        min-width:120px;
+    }
+
+    .final-screen{
+        display:none;
+        margin-top:30px;
+        animation:fadeIn 1s ease;
+    }
+
+    @keyframes fadeIn{
+        from{opacity:0; transform:translateY(20px);}
+        to{opacity:1; transform:translateY(0);}
+    }
+
+    .restart-btn{
+        margin-top:20px;
+        background:#3b82f6;
+    }
+
+    @media(max-width:700px){
+        h1{
+            font-size:2rem;
+        }
+
+        .image-container{
+            height:250px;
+        }
+
+        .guesses{
+            grid-template-columns:repeat(3,1fr);
+        }
+    }
+</style>
+</head>
+<body>
+
+<div class="background-glow"></div>
+<div class="background-glow2"></div>
+
+<div id="menuScreen" class="menu-screen">
+
+    <div class="menu-card">
+        <h1>🌍 GeoWordle Quest</h1>
+
+        <p class="menu-text">
+            Guess the country based on the image shown.
+            You have 6 attempts each round.
+        </p>
+
+        <div class="instructions">
+            <h3>How To Play</h3>
+
+            <ul>
+                <li>Look carefully at the image.</li>
+                <li>Type the country name.</li>
+                <li>Green = correct.</li>
+                <li>Yellow = close guess.</li>
+                <li>Red = incorrect.</li>
+            </ul>
+        </div>
+
+        <input
+            type="text"
+            id="playerName"
+            placeholder="Enter your name"
+        >
+
+        <button onclick="startGame()">
+            Start Adventure
+        </button>
+    </div>
+
+</div>
+
+<div class="container">
+
+    <h1>🌍 GeoWordle Quest</h1>
+    <p class="subtitle">
+        Guess the country from the image. You get 4 tries each round.
+    </p>
+
+    <div class="game-panel">
+
+        <div class="round-info">
+            <div>Round: <span id="round">1</span>/10</div>
+            <div>Guesses Left: <span id="guessesLeft">4</span></div>
+        </div>
+
+        <div class="image-container">
+            <img id="countryImage" src="" alt="Country Image">
+        </div>
+
+        <div class="question">
+            Where is this place?
+        </div>
+
+        <div class="guess-box">
+    <input type="text" id="guessInput" placeholder="Enter country name">
+    <button onclick="submitGuess()">Guess</button>
+
+    <button
+        id="hintBtn"
+        onclick="showHint()"
+        style="display:none;background:#f59e0b;"
+    >
+        Hint
+    </button>
+</div>
+
+        <div class="guesses" id="guessGrid"></div>
+
+        <div class="message" id="message"></div>
+        <div class="message" id="hintMessage"></div>
+
+        <div class="scoreboard">
+            <div class="score-card">
+                <h3>Wins</h3>
+                <p id="wins">0</p>
+            </div>
+
+            <div class="score-card">
+                <h3>Losses</h3>
+                <p id="losses">0</p>
+            </div>
+        </div>
+
+        <div class="final-screen" id="finalScreen">
+            <h2 id="finalTitle"></h2>
+            <p id="finalText"></p>
+            <button class="restart-btn" onclick="restartGame()">Play Again</button>
+        </div>
+
+    </div>
+</div>
+<audio id="correctSound" src="assets/audio/correct.mp3"></audio>
+<audio id="wrongSound" src="assets/audio/wrong.mp3"></audio>
+<audio id="clickSound" src="assets/audio/click.mp3"></audio>
+
+<audio
+    id="bgMusic"
+    src="assets/audio/ambience.mp3"
+    loop
+></audio>
+<script>
+const rounds = [
+{
+    answer:"france",
+    image:"https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=1200&auto=format&fit=crop"
+},
+{
+    answer:"japan",
+    image:"https://images.unsplash.com/photo-1492571350019-22de08371fd3?q=80&w=1200&auto=format&fit=crop"
+},
+{
+    answer:"brazil",
+    image:"https://images.unsplash.com/photo-1483729558449-99ef09a8c325?q=80&w=1200&auto=format&fit=crop"
+},
+{
+    answer:"egypt",
+    image:"https://images.unsplash.com/photo-1572252009286-268acec5ca0a?q=80&w=1200&auto=format&fit=crop"
+},
+{
+    answer:"australia",
+    image:"https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?q=80&w=1200&auto=format&fit=crop"
+},
+{
+    answer:"india",
+    image:"https://images.unsplash.com/photo-1524492412937-b28074a5d7da?q=80&w=1200&auto=format&fit=crop"
+},
+{
+    answer:"italy",
+    image:"https://images.unsplash.com/photo-1525874684015-58379d421a52?q=80&w=1200&auto=format&fit=crop"
+},
+{
+    answer:"canada",
+    image:"https://images.unsplash.com/photo-1501594907352-04cda38ebc29?q=80&w=1200&auto=format&fit=crop"
+},
+{
+    answer:"greece",
+    image:"https://images.unsplash.com/photo-1516483638261-f4dbaf036963?q=80&w=1200&auto=format&fit=crop"
+},
+{
+    answer:"mexico",
+    image:"https://images.unsplash.com/photo-1512813195386-6cf811ad3542?q=80&w=1200&auto=format&fit=crop"
+}
+];
+
+let currentRound = 0;
+let guesses = 0;
+let wins = 0;
+let losses = 0;
+let gameOver = false;
+let player = "";
+
+const image = document.getElementById("countryImage");
+const roundText = document.getElementById("round");
+const guessesLeftText = document.getElementById("guessesLeft");
+const message = document.getElementById("message");
+const guessGrid = document.getElementById("guessGrid");
+const input = document.getElementById("guessInput");
+const correctSound = document.getElementById("correctSound");
+const wrongSound = document.getElementById("wrongSound");
+const clickSound = document.getElementById("clickSound");
+const bgMusic = document.getElementById("bgMusic");
+
+window.addEventListener("DOMContentLoaded", () => {
+    if (bgMusic) bgMusic.volume = 0.3;
+    if (correctSound) correctSound.volume = 0.7;
+    if (wrongSound) wrongSound.volume = 0.7;
+});
+
+function loadRound(){
+    guesses = 0;
+    gameOver = false;
+    
+    document.getElementById("hintBtn").style.display = "none";
+    document.getElementById("hintMessage").textContent = "";
+
+    roundText.textContent = currentRound + 1;
+    guessesLeftText.textContent = 4;
+
+    image.src = rounds[currentRound].image;
+
+    guessGrid.innerHTML = "";
+    message.textContent = "";
+
+    input.value = "";
+}
+
+function levenshtein(a, b){
+
+    const matrix = [];
+
+    for(let i = 0; i <= b.length; i++){
+        matrix[i] = [i];
+    }
+
+    for(let j = 0; j <= a.length; j++){
+        matrix[0][j] = j;
+    }
+
+    for(let i = 1; i <= b.length; i++){
+
+        for(let j = 1; j <= a.length; j++){
+
+            if(b.charAt(i - 1) === a.charAt(j - 1)){
+
+                matrix[i][j] = matrix[i - 1][j - 1];
+
+            }else{
+
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j] + 1
+                );
+            }
+        }
+    }
+
+    return matrix[b.length][a.length];
+}
+
+function showHint(){
+
+    // Hint costs 1 guess
+    guesses++;
+
+    const guessesRemaining = 4 - guesses;
+    guessesLeftText.textContent = guessesRemaining;
+
+    const answer = rounds[currentRound].answer;
+
+    let hint = "";
+
+    if(answer.length <= 4){
+        hint =
+            "The country starts with '" +
+            answer.charAt(0).toUpperCase() +
+            "'";
+    }else{
+        hint =
+            "The country starts with '" +
+            answer.charAt(0).toUpperCase() +
+            "' and has " +
+            answer.length +
+            " letters.";
+    }
+
+    document.getElementById("hintMessage").innerHTML =
+        "💡 " + hint;
+
+    document.getElementById("hintBtn").style.display = "none";
+
+    // Check if the hint used up the final guess
+    if(guesses >= 4){
+
+        gameOver = true;
+        losses++;
+
+        document.getElementById("losses").textContent = losses;
+
+        message.innerHTML =
+            "❌ You lost! The answer was <b>" +
+            answer.toUpperCase() +
+            "</b>";
+
+        setTimeout(() => {
+            nextRound();
+        }, 2500);
+    }
+}
+
+function similarity(guess, answer){
+
+    guess = guess.toLowerCase();
+    answer = answer.toLowerCase();
+
+    if(guess === answer){
+        return "correct";
+    }
+
+    const distance = levenshtein(guess, answer);
+
+    const similarityScore =
+        1 - distance / Math.max(guess.length, answer.length);
+
+    if(similarityScore >= 0.6){
+        return "close";
+    }
+
+    return "wrong";
+}
+
+function revealGame(){
+    document.querySelector(".container").style.display = "block";
+}
+
+function submitGuess(){ 
+    if(gameOver) return;
+        if(clickSound){
+    clickSound.play();
+}
+    const guess = input.value.trim().toLowerCase();
+    if(!guess) return;
+    guesses++;
+    if(guesses === 2 && !gameOver){
+    document.getElementById("hintBtn").style.display = "inline-block";
+}
+    const guessesRemaining = 4 - guesses;
+    guessesLeftText.textContent = guessesRemaining;
+    const result = similarity(
+        guess,
+        rounds[currentRound].answer
+        );
+    const div = document.createElement("div");
+    div.classList.add("guess", result);
+    div.textContent = guess.toUpperCase();
+    guessGrid.appendChild(div);
+    if(guess === rounds[currentRound].answer){
+    gameOver = true;
+    wins++;
+    if(correctSound){
+    correctSound.play();
+}
+    document.getElementById("wins").textContent = wins;
+    message.innerHTML = "✅ Correct! The answer was <b>" +
+    rounds[currentRound].answer.toUpperCase() +
+    "</b>";
+
+    setTimeout(() => {
+        nextRound(); 
+    }, 2000); 
+    input.value = "";
+    return; }
+    if(guesses >= 4){
+        gameOver = true;
+        losses++;
+        if(wrongSound){
+    wrongSound.play();
+}
+        document.getElementById("losses").textContent = losses;
+        guessesLeftText.textContent = 0;
+        message.innerHTML =
+            "❌ You lost! The answer was <b>" +
+            rounds[currentRound].answer.toUpperCase() +
+            "</b>";
+
+        setTimeout(() => {
+            nextRound(); 
+        }, 2500);
+
+        input.value = "";
+
+        return;
+
+        }  
+        if(result === "close"){
+            message.innerHTML =
+                "🟨 Close guess... try again.";
+
+        }else{
+
+            message.innerHTML =
+                "🟥 Wrong guess.";
+        } input.value = "";
+    }
+
+function nextRound(){
+    currentRound++;
+
+    if(currentRound >= rounds.length){
+        endGame();
+        return;
+    }
+
+    loadRound();
+}
+
+function startGame(){
+
+    const input = document.getElementById("playerName");
+
+    player = input.value.trim();
+
+    if(player.length < 2){
+        alert("Please enter your name.");
+        return;
+    }
+
+    document.getElementById("menuScreen").style.display = "none";
+
+    revealGame();
+    loadRound();
+
+    if(bgMusic){
+    bgMusic.play();
+}
+}
+
+function endGame(){
+    document.getElementById("finalScreen").style.display = "block";
+
+    const title = document.getElementById("finalTitle");
+    const text = document.getElementById("finalText");
+
+    if(wins >= 7){
+        title.textContent = "🏆 Geography Master!";
+    }else if(wins >= 4){
+        title.textContent = "🌎 Great Explorer!";
+    }else{
+        title.textContent = "🧭 Keep Practicing!";
+    }
+
+    text.textContent =
+        "You won " + wins + " out of 10 rounds.";
+}
+
+function restartGame(){
+    currentRound = 0;
+    wins = 0;
+    losses = 0;
+
+    document.getElementById("wins").textContent = 0;
+    document.getElementById("losses").textContent = 0;
+
+    document.getElementById("finalScreen").style.display = "none";
+
+    loadRound();
+}
+
+input.addEventListener("keypress", function(e){
+    if(e.key === "Enter"){
+        submitGuess();
+    }
+});
+
+document.querySelector(".container").style.display = "none";
+</script>
+
+</body>
+</html>
