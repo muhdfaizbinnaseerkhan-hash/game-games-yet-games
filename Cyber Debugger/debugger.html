@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Fixer: Cyber Debugger</title>
+
+<style>
+:root{
+    --bg:#07111f;
+    --panel:#0f1c2d;
+    --panel2:#16263d;
+    --cyan:#00f7ff;
+    --green:#00ff99;
+    --red:#ff4d6d;
+    --yellow:#ffd166;
+    --text:#e8f1ff;
+}
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Consolas, monospace;
+}
+
+body{
+    background:
+        radial-gradient(circle at top,#0b2344,#050b15 70%);
+    color:var(--text);
+    min-height:100vh;
+}
+
+header{
+    text-align:center;
+    padding:20px;
+    border-bottom:2px solid var(--cyan);
+    box-shadow:0 0 20px var(--cyan);
+}
+
+header h1{
+    color:var(--cyan);
+    text-shadow:0 0 10px var(--cyan);
+}
+
+#game{
+    max-width:1200px;
+    margin:auto;
+    padding:20px;
+}
+
+.topbar{
+    display:flex;
+    gap:15px;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin-bottom:20px;
+}
+
+.card{
+    background:var(--panel);
+    padding:12px 18px;
+    border:1px solid var(--cyan);
+    border-radius:10px;
+    box-shadow:0 0 10px rgba(0,255,255,.3);
+}
+
+.main{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+}
+
+.panel{
+    background:var(--panel);
+    border:1px solid #1c466b;
+    border-radius:12px;
+    padding:15px;
+    min-height:500px;
+}
+
+.panel h2{
+    color:var(--cyan);
+    margin-bottom:10px;
+}
+
+#challengeDescription{
+    line-height:1.7;
+}
+
+textarea{
+    width:100%;
+    height:350px;
+    resize:none;
+    background:#07131f;
+    color:#8dffb3;
+    border:1px solid var(--green);
+    padding:15px;
+    font-size:15px;
+    border-radius:8px;
+}
+
+.buttons{
+    margin-top:15px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+button{
+    border:none;
+    cursor:pointer;
+    padding:12px 18px;
+    border-radius:8px;
+    font-weight:bold;
+    transition:.2s;
+}
+
+button:hover{
+    transform:translateY(-2px);
+}
+
+#checkBtn{
+    background:var(--green);
+}
+
+#hintBtn{
+    background:var(--yellow);
+}
+
+#restartBtn{
+    background:var(--red);
+    color:white;
+}
+
+#message{
+    margin-top:15px;
+    min-height:40px;
+    font-size:18px;
+}
+
+.success{
+    color:var(--green);
+}
+
+.fail{
+    color:var(--red);
+}
+
+#overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.85);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:999;
+}
+
+.overlay-box{
+    background:var(--panel2);
+    border:2px solid var(--cyan);
+    border-radius:15px;
+    padding:40px;
+    text-align:center;
+    max-width:700px;
+    box-shadow:0 0 40px var(--cyan);
+}
+
+.overlay-box h1{
+    color:var(--cyan);
+    margin-bottom:15px;
+}
+
+.overlay-box p{
+    margin-bottom:20px;
+    line-height:1.8;
+}
+
+.glow{
+    animation:glow 2s infinite alternate;
+}
+
+@keyframes glow{
+    from{box-shadow:0 0 10px var(--cyan);}
+    to{box-shadow:0 0 30px var(--cyan);}
+}
+
+@media(max-width:900px){
+    .main{
+        grid-template-columns:1fr;
+    }
+}
+</style>
+</head>
+<body>
+
+<div id="overlay">
+    <div class="overlay-box glow">
+        <h1>CODE FIXER: CYBER DEBUGGER</h1>
+        <p>
+            Fix broken code to progress through 9 rounds.
+            <br><br>
+            3 Sets:
+            <br>Set 1 = Easy
+            <br>Set 2 = Medium
+            <br>Set 3 = Hard
+            <br><br>
+            You have 3 lives.
+        </p>
+        <button onclick="startGame()">START GAME</button>
+    </div>
+</div>
+
+<header>
+    <h1>⚡ CODE FIXER: CYBER DEBUGGER ⚡</h1>
+</header>
+
+<div id="game">
+
+<div class="topbar">
+    <div class="card">Set: <span id="setDisplay">1</span>/3</div>
+    <div class="card">Round: <span id="roundDisplay">1</span>/9</div>
+    <div class="card">Score: <span id="scoreDisplay">0</span></div>
+    <div class="card">Lives: <span id="livesDisplay">3</span></div>
+</div>
+
+<div class="main">
+
+<div class="panel">
+    <h2>Mission</h2>
+    <div id="challengeDescription"></div>
+</div>
+
+<div class="panel">
+    <h2>Code Editor</h2>
+
+    <textarea id="editor"></textarea>
+
+    <div class="buttons">
+        <button id="checkBtn">CHECK CODE</button>
+        <button id="hintBtn">HINT</button>
+        <button id="restartBtn">RESTART GAME</button>
+    </div>
+
+    <div id="message"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+
+const music = new Audio();
+
+music.src = "bg.mp3";
+music.loop = true;
+music.volume = 0.4;
+
+const rounds = [
+
+{
+set:1,
+desc:"Round 1: Fix the missing semicolon.",
+broken:`let score = 10
+console.log(score);`,
+answer:`let score = 10;
+console.log(score);`,
+hint:"JavaScript statements usually end with ;"
+},
+
+{
+set:1,
+desc:"Round 2: Fix the variable name.",
+broken:`let scoer = 100;
+console.log(score);`,
+answer:`let score = 100;
+console.log(score);`,
+hint:"Variable spelling mismatch."
+},
+
+{
+set:1,
+desc:"Round 3: Fix the console function.",
+broken:`let points = 50;
+consol.log(points);`,
+answer:`let points = 50;
+console.log(points);`,
+hint:"The browser console object is misspelled."
+},
+
+{
+set:2,
+desc:"Round 4: Fix the function syntax.",
+broken:`function greet(
+{
+ return "Hello";
+}`,
+answer:`function greet()
+{
+ return "Hello";
+}`,
+hint:"Functions need matching parentheses."
+},
+
+{
+set:2,
+desc:"Round 5: Fix the return value.",
+broken:`function add(a,b){
+ return a-b;
+}`,
+answer:`function add(a,b){
+ return a+b;
+}`,
+hint:"The function name says what operation it should do."
+},
+
+{
+set:2,
+desc:"Round 6: Fix the if condition.",
+broken:`let x = 5;
+
+if(x = 5){
+ console.log("Correct");
+}`,
+answer:`let x = 5;
+
+if(x == 5){
+ console.log("Correct");
+}`,
+hint:"Comparison vs assignment."
+},
+
+{
+set:3,
+desc:"Round 7: Fix the array index.",
+broken:`const nums=[10,20,30];
+console.log(nums[3]);`,
+answer:`const nums=[10,20,30];
+console.log(nums[2]);`,
+hint:"Arrays start at index 0."
+},
+
+{
+set:3,
+desc:"Round 8: Fix the loop condition.",
+broken:`for(let i=0;i<=5;i++){
+ console.log(i);
+}`,
+answer:`for(let i=0;i<5;i++){
+ console.log(i);
+}`,
+hint:"The loop should stop before 5."
+},
+
+{
+set:3,
+desc:"Round 9: Fix BOTH errors.",
+broken:`function multiply(a,b){
+ return a+b
+}
+
+console.log(multply(2,3));`,
+answer:`function multiply(a,b){
+ return a*b
+}
+
+console.log(multiply(2,3));`,
+hint:"Wrong operator and misspelled function."
+}
+
+];
+
+let round=0;
+let score=0;
+let lives=3;
+
+const editor=document.getElementById("editor");
+const desc=document.getElementById("challengeDescription");
+const msg=document.getElementById("message");
+
+function beep(freq,duration,type="sine"){
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+
+    osc.type=type;
+    osc.frequency.value=freq;
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+
+    gain.gain.setValueAtTime(.1,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        ctx.currentTime+duration
+    );
+
+    osc.stop(ctx.currentTime+duration);
+}
+
+function loadRound(){
+    const r=rounds[round];
+
+    editor.value=r.broken;
+    desc.innerHTML=`
+        <h3>${r.desc}</h3>
+        <br>
+        Difficulty Set: ${r.set}
+        <br><br>
+        Fix the code until it exactly matches the correct version.
+    `;
+
+    document.getElementById("setDisplay").textContent=r.set;
+    document.getElementById("roundDisplay").textContent=round+1;
+    document.getElementById("scoreDisplay").textContent=score;
+    document.getElementById("livesDisplay").textContent=lives;
+
+    msg.textContent="";
+}
+
+function normalize(text){
+    return text.replace(/\s+/g," ").trim();
+}
+
+function winGame(){
+
+    beep(900,.2);
+    beep(1100,.2);
+    beep(1300,.4);
+
+    document.body.innerHTML=`
+    <div style="
+        min-height:100vh;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        background:black;
+        color:#00ff99;
+        font-family:Consolas;
+    ">
+        <div>
+            <h1 style="font-size:60px;">🏆 YOU WIN!</h1>
+            <h2>Cyber Debugger Master</h2>
+            <br>
+            <h3>Final Score: ${score}</h3>
+            <br>
+            <button onclick="location.reload()"
+            style="
+                padding:15px 30px;
+                background:#00ff99;
+                border:none;
+                font-size:20px;
+                cursor:pointer;">
+                Play Again
+            </button>
+        </div>
+    </div>
+    `;
+}
+
+function gameOver(){
+
+    beep(180,.5,"sawtooth");
+
+    document.body.innerHTML=`
+    <div style="
+        min-height:100vh;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        background:black;
+        color:#ff4d6d;
+        text-align:center;
+        font-family:Consolas;
+    ">
+        <div>
+            <h1 style="font-size:60px;">GAME OVER</h1>
+            <br>
+            <button onclick="location.reload()"
+            style="
+            padding:15px 30px;
+            border:none;
+            background:#ff4d6d;
+            color:white;
+            font-size:20px;">
+            Restart
+            </button>
+        </div>
+    </div>
+    `;
+}
+
+document.getElementById("checkBtn").onclick=()=>{
+
+    const user=normalize(editor.value);
+    const correct=normalize(rounds[round].answer);
+
+    if(user===correct){
+
+        score+=100;
+
+        msg.className="success";
+        msg.textContent="✔ Correct!";
+
+        beep(800,.15);
+        beep(1000,.15);
+
+        setTimeout(()=>{
+
+            round++;
+
+            if(round>=rounds.length){
+                winGame();
+            }else{
+                loadRound();
+            }
+
+        },800);
+
+    }else{
+
+        lives--;
+
+        document.getElementById("livesDisplay").textContent=lives;
+
+        msg.className="fail";
+        msg.textContent="✖ Bug remains in the code.";
+
+        beep(220,.3,"square");
+
+        if(lives<=0){
+            setTimeout(gameOver,700);
+        }
+    }
+
+    document.getElementById("scoreDisplay").textContent=score;
+};
+
+document.getElementById("hintBtn").onclick=()=>{
+    alert(rounds[round].hint);
+    score=Math.max(0,score-25);
+    document.getElementById("scoreDisplay").textContent=score;
+};
+
+document.getElementById("restartBtn").onclick=()=>{
+    if(confirm("Restart game?")){
+        location.reload();
+    }
+};
+
+function startGame(){
+    document.getElementById("overlay").style.display="none";
+    loadRound();
+    music.play();
+}
+
+</script>
+</body>
+</html>
